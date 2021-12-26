@@ -1,6 +1,6 @@
 小型spi協定架構
 最上層:
-module spi_four_state (
+module spi_three_wire_four_state (
 input Go, CLK, reset,
 input [15:0] regdata,
 output wire SCEN, SPC, ORDY,
@@ -10,7 +10,7 @@ reg [3:0] bitcount;
 reg [15:0] q;
 wire bitcountEN, rstbitcount, LDEN, SHEN, SCLK;
  
-spi_three_wire_four_state c01 (
+spi_four_state c01 (
 .CLK(CLK), 
 .Go(Go),
 .reset(reset),
@@ -57,7 +57,7 @@ endmodule
  
 子層:
  
-module spi_three_wire_four_state 
+module spi_four_state 
 #(parameter X_IDLE = 2'b00, X_START = 2'b01, X_SHIFT = 2'b10, X_STOP = 2'b11) 
 (input Go, CLK, reset,
  input [3:0] bitcount,
