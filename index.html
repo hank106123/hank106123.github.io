@@ -1,0 +1,155 @@
+小型spi協定架構
+最上層:
+module spi_four_state (
+input Go, CLK, reset,
+input [15:0] regdata,
+output wire SCEN, SPC, ORDY,
+inout SDA);
+ 
+reg [3:0] bitcount;
+reg [15:0] q;
+wire bitcountEN, rstbitcount, LDEN, SHEN, SCLK;
+ 
+spi_three_wire_four_state c01 (
+.CLK(CLK), 
+.Go(Go),
+.reset(reset),
+.bitcount(bitcount),
+.bitcountEN(bitcountEN),
+.rstbitcount(rstbitcount),
+.LDEN(LDEN),
+.SHEN(SHEN),
+.SCLK(SCLK),
+.SCEN(SCEN),
+.SPC(SPC),
+.ORDY(ORDY));
+ 
+assign SDA = (SCLK||SCEN) ? 1'bz : q[15] ; 
+ 
+always@(posedge CLK or posedge reset)
+begin
+  if (reset)
+    bitcount <= 0;
+  else if (rstbitcount)
+    bitcount <= 0;
+  else if (bitcountEN)
+    bitcount <= bitcount + 1;
+  else
+    bitcount <= bitcount;
+end
+ 
+always@(posedge CLK or posedge reset)
+begin
+  if (reset)
+    q <= 0;
+  else if (LDEN)
+    q <= regdata;
+  else if (SHEN)
+  begin
+    q [15:1] <= q [14:0];
+    q [0] <= 0;
+  end
+  else
+    q <= q;
+end
+ 
+endmodule
+ 
+子層:
+ 
+module spi_three_wire_four_state 
+#(parameter X_IDLE = 2'b00, X_START = 2'b01, X_SHIFT = 2'b10, X_STOP = 2'b11) 
+(input Go, CLK, reset,
+ input [3:0] bitcount,
+ output reg bitcountEN, rstbitcount, LDEN, SHEN, SCLK, SCEN, ORDY,
+ output wire SPC);
+ 
+reg [1:0] state, rst_state; 
+ 
+always@(posedge CLK or posedge reset)
+begin
+  if(reset)
+    state <= X_IDLE;
+  else
+    state <= rst_state;
+end
+ 
+assign SPC = SCLK ? 1'b1: ~CLK;
+ 
+always@(bitcount or Go or state)
+begin
+ case (state)
+   X_IDLE : 
+	begin
+	  SCEN = 1'b1;
+	  SCLK = 1'b1;
+	  bitcountEN = 1'b0;
+	  rstbitcount = 1'b0;
+	  ORDY = 1'b0;
+	  LDEN = 1'b0;
+	  SHEN = 1'b0;
+	  if (Go)
+	  rst_state = X_START;
+	  else if (!Go)
+	  rst_state = X_IDLE;
+	  else
+	  rst_state = X_IDLE;
+	end
+	X_START :
+	begin
+	  SCEN = 1'b0;
+	  SCLK = 1'b1;
+	  bitcountEN = 1'b0;
+	  rstbitcount = 1'b0;
+	  ORDY = 1'b0;
+	  LDEN = 1'b1;
+	  SHEN = 1'b0;  
+	  rst_state = X_SHIFT;
+	end
+	X_SHIFT :
+	begin
+	  SCEN = 1'b0;
+	  SCLK = 1'b0;
+	  bitcountEN = 1'b1;
+	  ORDY = 1'b0;
+	  LDEN = 1'b0;
+	  SHEN = 1'b1;
+ 
+	  if (bitcount < 4'b1111)
+	  rst_state = X_SHIFT;
+	  else if (bitcount == 4'b1111)
+	  rst_state = X_STOP;
+	  else
+	  rst_state = X_SHIFT;
+ 
+	  if (bitcount < 4'b1111)
+	  rstbitcount = 1'b0;	
+	  else if (bitcount == 4'b1111)
+	  rstbitcount = 1'b1;
+	  else
+	  rstbitcount = 1'b0;	  
+	end
+	X_STOP :
+	begin
+	  SCEN = 1'b1;
+	  SCLK = 1'b0;
+	  bitcountEN = 1'b0;
+	  rstbitcount = 1'b0;
+	  ORDY = 1'b1;
+	  LDEN = 1'b0;
+	  SHEN = 1'b0;
+	  rst_state = X_IDLE;
+	end
+	default :
+	begin
+	  SCEN = 1'bx;
+	  SCLK = 1'bx;
+	  bitcountEN = 1'bx;
+	  rstbitcount = 1'bx;
+	  ORDY = 1'bx;
+	  LDEN = 1'bx;
+	  SHEN = 1'bx;
+	end
+  endcase
+end
+endmodule
