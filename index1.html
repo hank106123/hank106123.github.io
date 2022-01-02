@@ -14,8 +14,8 @@ reg [26:0] q;
 
 i2c_seven_state c01 (.reset(reset),.GO(GO),.CLK(CLK),.bitcount(bitcount),
                      .bitcountEN(bitcountEN),.rstbitcount(rstbitcount),.LDEN(LDEN),.SHEN(SHEN),
-							.SDO(SDO),.ldnACK1(ldnACK1),.ldnACK2(ldnACK2),.ldnACK3(ldnACK3),
-							.rstACK(rstACK),.SCLK(SCLK));
+			.SDO(SDO),.ldnACK1(ldnACK1),.ldnACK2(ldnACK2),.ldnACK3(ldnACK3),
+			.rstACK(rstACK),.SCLK(SCLK));
 
 always@(posedge CLK or posedge reset)
 begin
